@@ -1,0 +1,89 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>等系统推消息</title>
+    <script src="https://cdn.bootcss.com/sockjs-client/1.1.4/sockjs.min.js"></script>
+    <script src="https://cdn.bootcss.com/stomp.js/2.3.3/stomp.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.2.0.min.js"
+            integrity="sha256-JAW99MJVpJBGcbzEuXk4Az05s/XyDdBomFqNlM3ic+I=" crossorigin="anonymous"></script>
+    <script src="js/jquery-1.7.1.min.js"></script>
+
+
+</head>
+<body onload="disconnect()">
+<noscript><h2 style="color: #ff0000">Seems your browser doesn't support Javascript! Websocket relies on Javascript being
+    enabled. Please enable
+    Javascript and reload this page!</h2></noscript>
+<div>
+    <div>
+        <input id="name"  value="小花"/>
+        <labal>连接</labal>
+        <button id="connect" onclick="connect();">Connect</button>
+        <labal>取消连接</labal>
+        <button id="disconnect" disabled="disabled" onclick="disconnect();">Disconnect</button>
+    </div>
+    <div id="conversationDiv">
+        <labal>广播消息</labal>
+        <input type="text" id="content"/>
+        <button id="sendMsg" onclick="sendMsg();">Send</button>
+
+    </div>
+    <div>
+        <labal>接收到的消息:</labal>
+        <p id="responseData"></p>
+
+    </div>
+
+</div>
+
+
+<script type="text/javascript">
+    var stompClient = null;
+    let name;
+
+    function setConnected(connected) {
+        document.getElementById("connect").disabled = connected;
+        document.getElementById("disconnect").disabled = !connected;
+        $("#response").html();
+    }
+
+    function connect() {
+        let tempName = $('#name').val()
+        if (!tempName) {
+            alert("请先取个称呼！");
+            return false;
+        }
+        name = tempName;
+        var socket = new SockJS("http://localhost:8080/topicWs");
+        stompClient = Stomp.over(socket);
+        stompClient.connect({}, function (frame) {
+            setConnected(true);
+            console.log('Connected: ' + frame);
+            stompClient.subscribe('/topic/chat/all', function (response) {
+                let chatMessage = JSON.parse(response.body);
+                let text = $('#responseData').html();
+                let html = text +  "<div><span style='color: rgb(248,1,1)'>"+ chatMessage.user +"     </span>" + "<span>        "+ chatMessage.sendTime +"</span></div>" +"<div><p>"+ chatMessage.message +"</p></div>";
+                $('#responseData').html(html);
+            });
+        },{});
+    }
+
+    function disconnect() {
+        if (stompClient != null) {
+            stompClient.disconnect();
+        }
+        setConnected(false);
+        console.log("Disconnected");
+    }
+
+    function sendMsg() {
+        if (!stompClient) {
+            alert("请先连接服务端");
+            return false;
+        }
+        var content = document.getElementById('content').value;
+        stompClient.send("/chat/all",{},JSON.stringify({'user': name,'message': content}));
+    }
+</script>
+</body>
+</html>
