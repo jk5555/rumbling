@@ -5,13 +5,16 @@ import com.kun.rumbling.domain.ChatMessage;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class ChatServiceImpl implements ChatService {
@@ -27,6 +30,9 @@ public class ChatServiceImpl implements ChatService {
     @Autowired
     private ChatMessageDao chatMessageDao;
 
+    @Autowired
+    private RestTemplate restTemplate;
+
 
     /**
      * 处理消息，以【@chatGPT 】开头的消息 视为调用 chatGPT 处理
@@ -34,7 +40,7 @@ public class ChatServiceImpl implements ChatService {
      * @param chatMessage 聊天消息
      * @return
      */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void processMessage(final ChatMessage chatMessage) {
         if (Objects.isNull(chatMessage)) {
             return;
@@ -58,16 +64,26 @@ public class ChatServiceImpl implements ChatService {
             this.chatGptProcessFlag = true;
         }
         try {
-
-//todo
-            ChatMessage msg = ChatMessage.buildChatGptMsg();
-            msg.setMessage("正在调试中无法回复问题");
-            try {
-                Thread.sleep(1000L);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            sendMsg(msg);
+            String message = StringUtils.substringAfter(chatMessage.getMessage(), "@chatGPT ");
+            HashMap<Object, Object> requestMap = new HashMap<>();
+            requestMap.put( "model","text-davinci-003");
+            requestMap.put("prompt", message);
+            requestMap.put( "temperature",0.9);
+            requestMap.put("max_tokens", 525);
+            requestMap.put("top_p",1);
+            requestMap.put("frequency_penalty",0);
+            requestMap.put("presence_penalty",0.6);
+            requestMap.put("stop", Arrays.asList(" Human:", " AI:"));
+            MultiValueMap<String, String> requestHeaders = new HttpHeaders();
+            requestHeaders.set("Authorization", "Bearer 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");
+            HttpEntity requestEntity = new HttpEntity(requestMap, requestHeaders);
+            Map<String, Object> map = restTemplate.postForObject("https://api.openai.com/v1/completions", requestEntity, Map.class);
+            Object choices = map.get("choices");
+            List list = (List) choices;
+            String text = (String) ((Map) list.get(0)).get("text");
+            ChatMessage res = ChatMessage.buildChatGptMsg();
+            res.setMessage(text);
+            sendMsg(res.pointUser(chatMessage.getUser()));
         } finally {
             this.chatGptProcessFlag = false;
         }
