@@ -11,6 +11,8 @@ import java.util.Date;
 @Data
 public class ChatMessage {
 
+    public static final String CHAT_GPT_PREFIX = "@chatGPT ";
+
 
     private Long msgId;
 

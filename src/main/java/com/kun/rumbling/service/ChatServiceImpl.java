@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.kun.rumbling.dao.ChatMessageDao;
 import com.kun.rumbling.domain.ChatMessage;
 import com.kun.rumbling.util.JsonUtils;
+import com.kun.rumbling.util.MessageUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +31,7 @@ public class ChatServiceImpl implements ChatService {
      */
     private volatile boolean chatGptProcessFlag = false;
     private static final String BATCH_NUM = UUID.randomUUID().toString();
-    private static final String CHAT_GPT_PREFIX = "@chatGPT ";
+
 
     @Autowired
     private SimpMessagingTemplate simpMessagingTemplate;
@@ -59,7 +60,7 @@ public class ChatServiceImpl implements ChatService {
         chatMessageDao.insert(chatMessage);
         String message = chatMessage.getMessage();
         //判断消息是否需要chatGPT处理
-        if (StringUtils.startsWith(message, CHAT_GPT_PREFIX)) {
+        if (StringUtils.startsWith(message, ChatMessage.CHAT_GPT_PREFIX)) {
             ((ChatService) AopContext.currentProxy()).processChatGptMessage(chatMessage);
         }
     }
@@ -73,35 +74,7 @@ public class ChatServiceImpl implements ChatService {
             this.chatGptProcessFlag = true;
         }
         try {
-            String requestMessage = StringUtils.substringAfter(chatMessage.getMessage(), CHAT_GPT_PREFIX);
-            String param = """
-                    {
-                        "model": "text-davinci-003",
-                        "prompt": "%s",
-                        "temperature": 0.9,
-                        "max_tokens": 525,
-                        "top_p": 1,
-                        "frequency_penalty": 0.0,
-                        "presence_penalty": 0.6,
-                        "stop": [
-                            " Human:",
-                            " AI:"
-                        ]
-                    }
-                    """;
-            Map<String, Object> requestParam = JsonUtils.readValue(String.format(param, requestMessage), new TypeReference<>() {
-            });
-            HttpHeaders httpHeaders = new HttpHeaders();
-            httpHeaders.set("Authorization", "Bearer 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");
-            HttpEntity<Map<String, Object>> mapHttpEntity = new HttpEntity<>(requestParam, httpHeaders);
-            ResponseEntity<Map> response = proxyRestTemplate.postForEntity("https://api.openai.com/v1/completions", mapHttpEntity, Map.class);
-            Map body = response.getBody();
-            List choices = (List) body.get("choices");
-            Object text = ((Map) choices.get(0)).get("text");
-            String resultMessage = Objects.toString(text);
-            sendMsg(ChatMessage.buildChatGptMsg().resetMessage(resultMessage).pointUser(chatMessage.getUser()));
-        } catch (Exception e) {
-            sendMsg(ChatMessage.buildChatGptMsg().resetMessage(e.getMessage()).connectMessage("出了点小差错...", -1).pointUser(chatMessage.getUser()));
+            sendMsg(ChatMessage.buildChatGptMsg().resetMessage(MessageUtils.callOpenAI(chatMessage.getMessage())).pointUser(chatMessage.getUser()));
         } finally {
             this.chatGptProcessFlag = false;
         }
