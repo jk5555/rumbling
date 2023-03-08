@@ -35,6 +35,11 @@ public class ChatMessage {
         return this;
     }
 
+    public ChatMessage resetMessage(String message){
+        this.message = message;
+        return this;
+    }
+
     public ChatMessage pointUser(String user) {
         return connectMessage( "@" + user + " ", -1);
     }
