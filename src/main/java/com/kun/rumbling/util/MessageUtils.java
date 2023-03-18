@@ -3,6 +3,8 @@ package com.kun.rumbling.util;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.kun.rumbling.domain.ChatMessage;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.core.io.DefaultResourceLoader;
+import org.springframework.core.io.support.PropertiesLoaderUtils;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -11,11 +13,14 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Properties;
 
 /**
  * @author kun.jiang@going-link.com 2023/3/8 16:24
  */
 public class MessageUtils {
+
+
 
     public static String callOpenAI(String message) {
         try {
@@ -38,7 +43,8 @@ public class MessageUtils {
             Map<String, Object> requestParam = JsonUtils.readValue(String.format(param, requestMessage), new TypeReference<>() {
             });
             HttpHeaders httpHeaders = new HttpHeaders();
-            httpHeaders.set("Authorization", "Bearer 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");
+            Properties properties = PropertiesLoaderUtils.loadProperties(new DefaultResourceLoader().getResource("application-dev.properties"));
+            httpHeaders.set("Authorization", (String) properties.get("Authorization"));
             HttpEntity<Map<String, Object>> mapHttpEntity = new HttpEntity<>(requestParam, httpHeaders);
             ResponseEntity<Map> response = new RestTemplate().postForEntity("https://api.openai.com/v1/completions", mapHttpEntity, Map.class);
             Map body = response.getBody();
