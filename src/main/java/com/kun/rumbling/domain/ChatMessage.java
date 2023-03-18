@@ -11,6 +11,8 @@ import java.util.Date;
 @Data
 public class ChatMessage {
 
+    public static final String CHAT_GPT_PREFIX = "@chatGPT ";
+
 
     private Long msgId;
 
@@ -32,6 +34,11 @@ public class ChatMessage {
      */
     public ChatMessage connectMessage(String message, int point) {
         this.message = point >= 0 ? this.message + message : message + this.message;
+        return this;
+    }
+
+    public ChatMessage resetMessage(String message){
+        this.message = message;
         return this;
     }
 
