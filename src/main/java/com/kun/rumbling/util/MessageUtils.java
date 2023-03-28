@@ -22,7 +22,7 @@ public class MessageUtils {
 
 
 
-    public static String callOpenAI(String message) {
+    public static String callOpenAI(String token, String message) {
         try {
             String requestMessage = StringUtils.substringAfter(message, ChatMessage.CHAT_GPT_PREFIX);
             String param = """
@@ -43,8 +43,9 @@ public class MessageUtils {
             Map<String, Object> requestParam = JsonUtils.readValue(String.format(param, requestMessage), new TypeReference<>() {
             });
             HttpHeaders httpHeaders = new HttpHeaders();
-            Properties properties = PropertiesLoaderUtils.loadProperties(new DefaultResourceLoader().getResource("application-dev.properties"));
-            httpHeaders.set("Authorization", (String) properties.get("Authorization"));
+            //Properties properties = PropertiesLoaderUtils.loadProperties(new DefaultResourceLoader().getResource("application-dev.properties"));
+            //httpHeaders.set("Authorization", (String) properties.get("Authorization"));
+            httpHeaders.set("Authorization", token);
             HttpEntity<Map<String, Object>> mapHttpEntity = new HttpEntity<>(requestParam, httpHeaders);
             ResponseEntity<Map> response = new RestTemplate().postForEntity("https://api.openai.com/v1/completions", mapHttpEntity, Map.class);
             Map body = response.getBody();
@@ -59,26 +60,23 @@ public class MessageUtils {
     }
 
 
-    public static String callProxy(String message) {
+    public static String callProxy(String token, String sessionId, String message) {
         try {
             String requestMessage = StringUtils.substringAfter(message, ChatMessage.CHAT_GPT_PREFIX);
             String param = """
                     {
-                          "apiKey": "sk-meEzK7QqkmLY42rO9Z84T3BlbkFJWqjXFp7aVxxxxxxx",
-                          "sessionId": "8d1cb9b0-d535-43a8-b738-4f61b1608579",
-                          "content": "你是谁？"
+                          "apiKey": "%s",
+                          "sessionId": "%s",
+                          "content": "%s"
                       }
                     """;
-            Map<String, Object> requestParam = JsonUtils.readValue(String.format(param, requestMessage), new TypeReference<>() {
+            Map<String, Object> requestParam = JsonUtils.readValue(String.format(param, token, sessionId, requestMessage), new TypeReference<>() {
             });
-            HttpHeaders httpHeaders = new HttpHeaders();
-            httpHeaders.set("Authorization", "Bearer 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");
-            HttpEntity<Map<String, Object>> mapHttpEntity = new HttpEntity<>(requestParam, httpHeaders);
-            ResponseEntity<Map> response = new RestTemplate().postForEntity("https://api.openai.com/v1/completions", mapHttpEntity, Map.class);
+            ResponseEntity<Map> response = new RestTemplate().postForEntity("https://api.openai.com/v1/completions", requestParam, Map.class);
             Map body = response.getBody();
-            List choices = (List) body.get("choices");
-            Object text = ((Map) choices.get(0)).get("text");
-            String resultMessage = Objects.toString(text);
+
+
+
             return resultMessage;
         } catch (Exception e) {
             e.printStackTrace();
