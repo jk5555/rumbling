@@ -3,8 +3,6 @@ package com.kun.rumbling.util;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.kun.rumbling.domain.ChatMessage;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.core.io.DefaultResourceLoader;
-import org.springframework.core.io.support.PropertiesLoaderUtils;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -13,7 +11,6 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Properties;
 
 /**
  * @author kun.jiang@going-link.com 2023/3/8 16:24
@@ -72,11 +69,10 @@ public class MessageUtils {
                     """;
             Map<String, Object> requestParam = JsonUtils.readValue(String.format(param, token, sessionId, requestMessage), new TypeReference<>() {
             });
-            ResponseEntity<Map> response = new RestTemplate().postForEntity("https://api.openai.com/v1/completions", requestParam, Map.class);
+            ResponseEntity<Map> response = new RestTemplate().postForEntity("https://", requestParam, Map.class);
             Map body = response.getBody();
-
-
-
+            //todo....api还没确定
+            String resultMessage = Objects.toString(body.get("text"));
             return resultMessage;
         } catch (Exception e) {
             e.printStackTrace();

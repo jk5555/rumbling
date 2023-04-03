@@ -74,7 +74,9 @@ public class ChatServiceImpl implements ChatService {
             this.chatGptProcessFlag = true;
         }
         try {
-            sendMsg(ChatMessage.buildChatGptMsg().resetMessage(MessageUtils.callOpenAI(chatMessage.getMessage())).pointUser(chatMessage.getUser()));
+            ChatMessage gptMessage = ChatMessage.buildChatGptMsg().resetMessage(MessageUtils.callProxy(chatMessageDao.getToken(), BATCH_NUM, chatMessage.getMessage())).pointUser(chatMessage.getUser());
+            sendMsg(gptMessage);
+            chatMessageDao.insert(gptMessage);
         } finally {
             this.chatGptProcessFlag = false;
         }
