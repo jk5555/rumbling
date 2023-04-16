@@ -1,36 +1,33 @@
 package com.kun.rumbling.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.kun.rumbling.dao.ChatMessageDao;
 import com.kun.rumbling.domain.ChatMessage;
-import com.kun.rumbling.util.JsonUtils;
 import com.kun.rumbling.util.MessageUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
 @Service
 public class ChatServiceImpl implements ChatService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ChatServiceImpl.class);
+
     /**
      * 当前chatGPT是否正在处理中，为是时将拒掉要chatGPT处理的消息
      */
     private volatile boolean chatGptProcessFlag = false;
-    private static final String BATCH_NUM = UUID.randomUUID().toString();
+    public static final String BATCH_NUM = UUID.randomUUID().toString();
 
 
     @Autowired
@@ -74,9 +71,10 @@ public class ChatServiceImpl implements ChatService {
             this.chatGptProcessFlag = true;
         }
         try {
-            ChatMessage gptMessage = ChatMessage.buildChatGptMsg().resetMessage(MessageUtils.callProxy(chatMessageDao.getToken(), BATCH_NUM, chatMessage.getMessage())).pointUser(chatMessage.getUser());
-            sendMsg(gptMessage);
+            ChatMessage gptMessage = ChatMessage.buildChatGptMsg().resetMessage(MessageUtils.callOpenAI(chatMessageDao.getToken(), chatMessage.getMessage())).pointUser(chatMessage.getUser());
+            LOGGER.info("chatGptMessage:{}", gptMessage.getMessage());
             chatMessageDao.insert(gptMessage);
+            sendMsg(gptMessage);
         } finally {
             this.chatGptProcessFlag = false;
         }

@@ -1,6 +1,7 @@
 package com.kun.rumbling.domain;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.kun.rumbling.service.ChatServiceImpl;
 import lombok.Data;
 
 import java.util.Date;
@@ -50,6 +51,7 @@ public class ChatMessage {
     public static ChatMessage buildChatGptMsg(){
         ChatMessage chatMessage = new ChatMessage();
         chatMessage.setUser("chatGPT机器人");
+        chatMessage.setBatchNum(ChatServiceImpl.BATCH_NUM);
         chatMessage.setSendTime(new Date());
         chatMessage.setMessage("当前正在处理前一位用户的请求，请稍后再试！");
         return chatMessage;
