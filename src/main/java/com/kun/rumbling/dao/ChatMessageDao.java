@@ -1,6 +1,8 @@
 package com.kun.rumbling.dao;
 
 import com.kun.rumbling.domain.ChatMessage;
+import com.kun.rumbling.domain.ChatgptProxyInfo;
+import com.kun.rumbling.util.JsonUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -23,6 +25,15 @@ public class ChatMessageDao {
             return StringUtils.EMPTY;
         }
         return String.valueOf(queryForList.get(0).get("token"));
+    }
+
+        public ChatgptProxyInfo getProxyInfo(){
+        String sql = " select proxy_id \"proxyId\",proxy_type \"proxyType\",proxy_ip \"proxyIp\",proxy_port \"proxyPort\",enable  \"enable\",default_flag \"defaultFlag\" from chatgpt_proxy_info where enable = 1 and default_flag = 1 order by proxy_id desc limit 1 ";
+        List<Map<String, Object>> queryForList = jdbcTemplate.queryForList(sql);
+        if (CollectionUtils.isEmpty(queryForList)) {
+            return new ChatgptProxyInfo();
+        }
+        return JsonUtils.convertToType(queryForList.get(0), ChatgptProxyInfo.class);
     }
 
 

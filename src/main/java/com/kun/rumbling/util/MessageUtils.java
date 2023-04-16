@@ -19,36 +19,37 @@ public class MessageUtils {
 
 
 
-    public static String callOpenAI(String token, String message) {
+    public static String callOpenAI(RestTemplate template, String token, String message) {
         try {
             String requestMessage = StringUtils.substringAfter(message, ChatMessage.CHAT_GPT_PREFIX);
             String param = """
                     {
-                        "model": "text-davinci-003",
-                        "prompt": "%s",
-                        "temperature": 0.9,
-                        "max_tokens": 525,
-                        "top_p": 1,
-                        "frequency_penalty": 0.0,
-                        "presence_penalty": 0.6,
-                        "stop": [
-                            " Human:",
-                            " AI:"
-                        ]
-                    }
+                         "model": "gpt-3.5-turbo",
+                         "messages": [
+                             {
+                                 "role": "system",
+                                 "content": "You are a helpful assistant."
+                             },
+                             {
+                                 "role": "user",
+                                 "content": "%s"
+                             }
+                         ]
+                     }
                     """;
             Map<String, Object> requestParam = JsonUtils.readValue(String.format(param, requestMessage), new TypeReference<>() {
             });
             HttpHeaders httpHeaders = new HttpHeaders();
-            //Properties properties = PropertiesLoaderUtils.loadProperties(new DefaultResourceLoader().getResource("application-dev.properties"));
-            //httpHeaders.set("Authorization", (String) properties.get("Authorization"));
             httpHeaders.set("Authorization", token);
+            httpHeaders.set("Accept-Encoding", "gzip, deflate, br");
+            httpHeaders.set("Accept", "*/*");
+            httpHeaders.set("User-Agent", "PostmanRuntime/7.26.8");
             HttpEntity<Map<String, Object>> mapHttpEntity = new HttpEntity<>(requestParam, httpHeaders);
-            ResponseEntity<Map> response = new RestTemplate().postForEntity("https://api.openai.com/v1/completions", mapHttpEntity, Map.class);
+            ResponseEntity<Map> response = template.postForEntity("https://api.openai.com/v1/chat/completions", mapHttpEntity, Map.class);
             Map body = response.getBody();
             List choices = (List) body.get("choices");
-            Object text = ((Map) choices.get(0)).get("text");
-            String resultMessage = Objects.toString(text);
+            Map messageMap = (Map) ((Map) choices.get(0)).get("message");
+            String resultMessage = Objects.toString(messageMap.get("content"));
             return resultMessage;
         } catch (Exception e) {
             e.printStackTrace();
@@ -57,7 +58,7 @@ public class MessageUtils {
     }
 
 
-    public static String callProxy(String token, String sessionId, String message) {
+    public static String callProxy(RestTemplate template, String token, String sessionId, String message) {
         try {
             String requestMessage = StringUtils.substringAfter(message, ChatMessage.CHAT_GPT_PREFIX);
             String param = """
